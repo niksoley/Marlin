@@ -17,20 +17,16 @@
  * along with the Arduino SdFat Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
+#include "Marlin.h"
+#ifdef SDSUPPORT
+
 #ifndef SdBaseFile_h
 #define SdBaseFile_h
 /**
  * \file
  * \brief SdBaseFile class
  */
-#include <avr/pgmspace.h>
-#define  HardwareSerial_h // trick to disable the standard HWserial
-#if ARDUINO < 100
-#include <WProgram.h>
-#else  // ARDUINO
-#include <Arduino.h>
-#endif  // ARDUINO
-#include "MarlinSerial.h"
+#include "Marlin.h"
 #include "SdFatConfig.h"
 #include "SdVolume.h"
 //------------------------------------------------------------------------------
@@ -287,7 +283,7 @@ class SdBaseFile {
   bool printName();
   int16_t read();
   int16_t read(void* buf, uint16_t nbyte);
-  int8_t readDir(dir_t* dir);
+  int8_t readDir(dir_t* dir, char* longFilename);
   static bool remove(SdBaseFile* dirFile, const char* path);
   bool remove();
   /** Set the file's current position to zero. */
@@ -459,7 +455,7 @@ class SdBaseFile {
    * \param[out] dir The dir_t struct that will receive the data.
    * \return bytes read for success zero for eof or -1 for failure.
    */
-  int8_t readDir(dir_t& dir) {return readDir(&dir);}  // NOLINT
+  int8_t readDir(dir_t& dir, char* longFilename) {return readDir(&dir, longFilename);}  // NOLINT
   /** \deprecated Use:
    * static uint8_t remove(SdBaseFile* dirFile, const char* path);
    * \param[in] dirFile The directory that contains the file.
@@ -484,3 +480,5 @@ class SdBaseFile {
 };
 
 #endif  // SdBaseFile_h
+#endif
+

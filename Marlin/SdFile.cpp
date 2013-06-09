@@ -17,6 +17,9 @@
  * along with the Arduino SdFat Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
+#include "Marlin.h"
+
+#ifdef SDSUPPORT
 #include "SdFile.h"
 /**  Create a file object and open it in the current working directory.
  *
@@ -52,13 +55,16 @@ int16_t SdFile::write(const void* buf, uint16_t nbyte) {
  * Use writeError to check for errors.
  */
 #if ARDUINO >= 100
-  size_t SdFile::write(uint8_t b)
-#else
-  void SdFile::write(uint8_t b)
-#endif
+size_t SdFile::write(uint8_t b)
 {
-  SdBaseFile::write(&b, 1);
+    return SdBaseFile::write(&b, 1);
 }
+#else
+void SdFile::write(uint8_t b)
+{
+    SdBaseFile::write(&b, 1);
+}
+#endif
 //------------------------------------------------------------------------------
 /** Write a string to a file. Used by the Arduino Print class.
  * \param[in] str Pointer to the string.
@@ -84,3 +90,7 @@ void SdFile::writeln_P(PGM_P str) {
   write_P(str);
   write_P(PSTR("\r\n"));
 }
+
+
+#endif
+

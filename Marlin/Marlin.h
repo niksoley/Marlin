@@ -1,49 +1,65 @@
-#ifndef __MARLINH
-#define __MARLINH
-
 // Tonokip RepRap firmware rewrite based off of Hydra-mmm firmware.
 // Licence: GPL
-#define  HardwareSerial_h // trick to disable the standard HWserial
-#include <stdio.h>
-#include <math.h>
-#if ARDUINO >= 100
-  #include "Arduino.h"
-#else
-   #include "WProgram.h"
-#endif
 
-#include "fastio.h"
-#include <avr/pgmspace.h>
-#include "Configuration.h"
-#include "MarlinSerial.h"
+#ifndef MARLIN_H
+#define MARLIN_H
+
+#define  HardwareSerial_h // trick to disable the standard HWserial
 
 #define  FORCE_INLINE __attribute__((always_inline)) inline
-//#define SERIAL_ECHO(x) Serial << "echo: " << x;
-//#define SERIAL_ECHOLN(x) Serial << "echo: "<<x<<endl;
-//#define SERIAL_ERROR(x) Serial << "Error: " << x;
-//#define SERIAL_ERRORLN(x) Serial << "Error: " << x<<endl;
-//#define SERIAL_PROTOCOL(x) Serial << x;
-//#define SERIAL_PROTOCOLLN(x) Serial << x<<endl;
 
-//this is a unfinsihed attemp to removes a lot of warning messages, see:
-// http://www.avrfreaks.net/index.php?name=PNphpBB2&file=printview&t=57011
-//typedef char prog_char PROGMEM; 
-// //#define PSTR    (s )        ((const PROGMEM char *)(s))
-// //# define MYPGM(s) (__extension__({static prog_char __c[] = (s); &__c[0];})) 
-// //#define MYPGM(s) ((const prog_char *g PROGMEM=s))
-// //#define MYPGM(s) PSTR(s)
-#define MYPGM(s)  (__extension__({static char __c[] __attribute__((__progmem__)) = (s); &__c[0];}))  //This is the normal behaviour
-//#define MYPGM(s)  (__extension__({static prog_char __c[]  = (s); &__c[0];})) //this does not work but hides the warnings
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+
+#include <util/delay.h>
+#include <avr/pgmspace.h>
+#include <avr/eeprom.h>
+#include <avr/interrupt.h>
 
 
-#define SERIAL_PROTOCOL(x) MSerial.print(x);
-#define SERIAL_PROTOCOLPGM(x) serialprintPGM(MYPGM(x));
-#define SERIAL_PROTOCOLLN(x) {MSerial.print(x);MSerial.write('\n');}
-#define SERIAL_PROTOCOLLNPGM(x) {serialprintPGM(MYPGM(x));MSerial.write('\n');}
+#include "fastio.h"
+#include "Configuration.h"
+#include "pins.h"
+
+#if ARDUINO >= 100 
+  #if defined(__AVR_ATmega644P__)
+    //#include "WProgram.h"
+  //#else
+    #include "Arduino.h"
+  #endif
+//#else
+   //#include "WProgram.h"
+#endif
+
+#include "MarlinSerial.h"
+
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+
+#include "WString.h"
+
+#if MOTHERBOARD == 8  // Teensylu
+  #define MYSERIAL Serial
+#else
+  #define MYSERIAL MSerial
+#endif
+
+#define SERIAL_PROTOCOL(x) MYSERIAL.print(x);
+#define SERIAL_PROTOCOL_F(x,y) MYSERIAL.print(x,y);
+#define SERIAL_PROTOCOLPGM(x) serialprintPGM(PSTR(x));
+#define SERIAL_PROTOCOLLN(x) {MYSERIAL.print(x);MYSERIAL.write('\n');}
+#define SERIAL_PROTOCOLLNPGM(x) {serialprintPGM(PSTR(x));MYSERIAL.write('\n');}
 
 
-const prog_char errormagic[] PROGMEM ="Error:";
-const prog_char echomagic[] PROGMEM ="echo:";
+const char errormagic[] PROGMEM ="Error:";
+const char echomagic[] PROGMEM ="echo:";
 #define SERIAL_ERROR_START serialprintPGM(errormagic);
 #define SERIAL_ERROR(x) SERIAL_PROTOCOL(x)
 #define SERIAL_ERRORPGM(x) SERIAL_PROTOCOLPGM(x)
@@ -56,17 +72,20 @@ const prog_char echomagic[] PROGMEM ="echo:";
 #define SERIAL_ECHOLN(x) SERIAL_PROTOCOLLN(x)
 #define SERIAL_ECHOLNPGM(x) SERIAL_PROTOCOLLNPGM(x)
 
-#define SERIAL_ECHOPAIR(name,value) {SERIAL_ECHOPGM(name);SERIAL_ECHO(value);}
+#define SERIAL_ECHOPAIR(name,value) (serial_echopair_P(PSTR(name),(value)))
+
+void serial_echopair_P(const char *s_P, float v);
+void serial_echopair_P(const char *s_P, double v);
+void serial_echopair_P(const char *s_P, unsigned long v);
 
 
 //things to write to serial from Programmemory. saves 400 to 2k of RAM.
-#define SerialprintPGM(x) serialprintPGM(MYPGM(x))
 FORCE_INLINE void serialprintPGM(const char *str)
 {
   char ch=pgm_read_byte(str);
   while(ch)
   {
-    MSerial.write(ch);
+    MYSERIAL.write(ch);
     ch=pgm_read_byte(++str);
   }
 }
@@ -75,7 +94,7 @@ FORCE_INLINE void serialprintPGM(const char *str)
 void get_command();
 void process_commands();
 
-void manage_inactivity(byte debug);
+void manage_inactivity();
 
 #if X_ENABLE_PIN > -1
   #define  enable_x() WRITE(X_ENABLE_PIN, X_ENABLE_ON)
@@ -94,8 +113,13 @@ void manage_inactivity(byte debug);
 #endif
 
 #if Z_ENABLE_PIN > -1
-  #define  enable_z() WRITE(Z_ENABLE_PIN, Z_ENABLE_ON)
-  #define disable_z() WRITE(Z_ENABLE_PIN,!Z_ENABLE_ON)
+  #ifdef Z_DUAL_STEPPER_DRIVERS
+    #define  enable_z() { WRITE(Z_ENABLE_PIN, Z_ENABLE_ON); WRITE(Z2_ENABLE_PIN, Z_ENABLE_ON); }
+    #define disable_z() { WRITE(Z_ENABLE_PIN,!Z_ENABLE_ON); WRITE(Z2_ENABLE_PIN,!Z_ENABLE_ON); }
+  #else
+    #define  enable_z() WRITE(Z_ENABLE_PIN, Z_ENABLE_ON)
+    #define disable_z() WRITE(Z_ENABLE_PIN,!Z_ENABLE_ON)
+  #endif
 #else
   #define enable_z() ;
   #define disable_z() ;
@@ -135,9 +159,17 @@ void ClearToSend();
 void get_coordinates();
 void prepare_move();
 void kill();
+void Stop();
+
+bool IsStopped();
 
 void enquecommand(const char *cmd); //put an ascii command at the end of the current buffer.
 void prepare_arc_move(char isclockwise);
+void clamp_to_software_endstops(float target[3]);
+
+#ifdef FAST_PWM_FAN
+void setPwmFrequency(uint8_t pin, int val);
+#endif
 
 #ifndef CRITICAL_SECTION_START
   #define CRITICAL_SECTION_START  unsigned char _sreg = SREG; cli();
@@ -148,9 +180,15 @@ extern float homing_feedrate[];
 extern bool axis_relative_modes[];
 extern float current_position[NUM_AXIS] ;
 extern float add_homeing[3];
-extern bool stop_heating_wait;
+extern float min_pos[3];
+extern float max_pos[3];
+extern unsigned char FanSpeed;
+
+extern unsigned long starttime;
+extern unsigned long stoptime;
 
 // Handling multiple extruders pins
 extern uint8_t active_extruder;
 
 #endif
+

@@ -19,7 +19,6 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "Configuration.h"
 #include "Marlin.h"
 #include "stepper.h"
 #include "planner.h"
@@ -46,8 +45,10 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
   if (isclockwise) { angular_travel -= 2*M_PI; }
   
   float millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
-  if (millimeters_of_travel == 0.0) { return; }
+  if (millimeters_of_travel < 0.001) { return; }
   uint16_t segments = floor(millimeters_of_travel/MM_PER_ARC_SEGMENT);
+  if(segments == 0) segments = 1;
+  
   /*  
     // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
     // by a number of discrete segments. The inverse feed_rate should be correct for the sum of 
@@ -123,6 +124,8 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
     arc_target[axis_1] = center_axis1 + r_axis1;
     arc_target[axis_linear] += linear_per_segment;
     arc_target[E_AXIS] += extruder_per_segment;
+
+    clamp_to_software_endstops(arc_target);
     plan_buffer_line(arc_target[X_AXIS], arc_target[Y_AXIS], arc_target[Z_AXIS], arc_target[E_AXIS], feed_rate, extruder);
     
   }
@@ -131,4 +134,5 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
 
   //   plan_set_acceleration_manager_enabled(acceleration_manager_was_enabled);
 }
+
 

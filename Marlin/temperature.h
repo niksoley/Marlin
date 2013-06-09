@@ -22,7 +22,6 @@
 #define temperature_h 
 
 #include "Marlin.h"
-#include "fastio.h"
 #include "planner.h"
 #ifdef PID_ADD_EXTRUSION_RATE
   #include "stepper.h"
@@ -43,10 +42,18 @@ extern int heatingtarget_raw[EXTRUDERS];
 extern int current_raw[EXTRUDERS];
 extern int target_raw_bed;
 extern int current_raw_bed;
-extern float Kp,Ki,Kd,Kc;
+#ifdef BED_LIMIT_SWITCHING
+  extern int target_bed_low_temp ;  
+  extern int target_bed_high_temp ;
+#endif
 
 #ifdef PIDTEMP
+  extern float Kp,Ki,Kd,Kc;
   extern float pid_setpoint[EXTRUDERS];
+#endif
+#ifdef PIDTEMPBED
+  extern float bedKp,bedKi,bedKd;
+  extern float pid_setpoint_bed;
 #endif
   
 // #ifdef WATCHPERIOD
@@ -83,7 +90,22 @@ FORCE_INLINE void setTargetHotend(const float &celsius, uint8_t extruder) {
 };
 
 FORCE_INLINE void setTargetBed(const float &celsius) {  
+  
   target_raw_bed = temp2analogBed(celsius);
+	#ifdef PIDTEMPBED
+  pid_setpoint_bed = celsius;
+  #elif defined BED_LIMIT_SWITCHING
+    if(celsius>BED_HYSTERESIS)
+    {
+    target_bed_low_temp= temp2analogBed(celsius-BED_HYSTERESIS);
+    target_bed_high_temp= temp2analogBed(celsius+BED_HYSTERESIS);
+    }
+    else
+    { 
+      target_bed_low_temp=0;
+      target_bed_high_temp=0;
+    }
+  #endif
 };
 
 FORCE_INLINE bool isHeatingHotend(uint8_t extruder){  
@@ -113,6 +135,8 @@ FORCE_INLINE bool isCoolingBed() {
 #define setTargetHotend1(_celsius) setTargetHotend((_celsius), 1)
 #define isHeatingHotend1() isHeatingHotend(1)
 #define isCoolingHotend1() isCoolingHotend(1)
+#else
+#define setTargetHotend1(_celsius) do{}while(0)
 #endif
 #if EXTRUDERS > 2
 #define degHotend2() degHotend(2)
@@ -120,26 +144,33 @@ FORCE_INLINE bool isCoolingBed() {
 #define setTargetHotend2(_celsius) setTargetHotend((_celsius), 2)
 #define isHeatingHotend2() isHeatingHotend(2)
 #define isCoolingHotend2() isCoolingHotend(2)
+#else
+#define setTargetHotend2(_celsius) do{}while(0)
 #endif
 #if EXTRUDERS > 3
 #error Invalid number of extruders
 #endif
 
-FORCE_INLINE void autotempShutdown(){
- #ifdef AUTOTEMP
- if(autotemp_enabled)
- {
-  autotemp_enabled=false;
-  if(degTargetHotend(ACTIVE_EXTRUDER)>autotemp_min)
-    setTargetHotend(0,ACTIVE_EXTRUDER);
- }
- #endif
-}
+
 
 int getHeaterPower(int heater);
 void disable_heater();
 void setWatch();
 void updatePID();
 
+FORCE_INLINE void autotempShutdown(){
+ #ifdef AUTOTEMP
+ if(autotemp_enabled)
+ {
+  autotemp_enabled=false;
+  if(degTargetHotend(active_extruder)>autotemp_min)
+    setTargetHotend(0,active_extruder);
+ }
+ #endif
+}
+
+void PID_autotune(float temp, int extruder, int ncycles);
+
 #endif
+
 

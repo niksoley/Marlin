@@ -3,8 +3,8 @@
   why double up on these macros? see http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
 */
 
-#ifndef	_ARDUINO_H
-#define	_ARDUINO_H
+#ifndef	_FASTIO_ARDUINO_H
+#define	_FASTIO_ARDUINO_H
 
 #include <avr/io.h>
 
@@ -424,7 +424,7 @@ pins
 #define PD7_PWM			NULL
 #endif	/*	_AVR_ATmega{168,328,328P}__ */
 
-#if defined (__AVR_ATmega644__) || defined (__AVR_ATmega644P__) || defined (__AVR_ATmega644PA__)
+#if defined (__AVR_ATmega644__) || defined (__AVR_ATmega644P__) || defined (__AVR_ATmega644PA__) || defined (__AVR_ATmega1284P__)
 // UART
 #define	RXD					DIO8
 #define	TXD					DIO9
@@ -1928,7 +1928,7 @@ pins
 
 #endif
 
-#if defined (__AVR_AT90USB1287__)
+#if defined (__AVR_AT90USB1287__) || defined (__AVR_AT90USB1286__)
 // SPI
 #define	SCK					DIO9
 #define	MISO				DIO11
@@ -2579,4 +2579,5 @@ pins
 #error pins for this chip not defined in arduino.h! If you write an appropriate pin definition and have this firmware work on your chip, please submit a pull request
 #endif
 
-#endif /* _ARDUINO_H */
+#endif /* _FASTIO_ARDUINO_H */
+
